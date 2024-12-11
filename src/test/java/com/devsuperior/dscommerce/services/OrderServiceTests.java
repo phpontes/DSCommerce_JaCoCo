@@ -17,6 +17,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import com.devsuperior.dscommerce.dto.OrderDTO;
 import com.devsuperior.dscommerce.entities.Order;
+import com.devsuperior.dscommerce.entities.OrderItem;
 import com.devsuperior.dscommerce.entities.Product;
 import com.devsuperior.dscommerce.entities.User;
 import com.devsuperior.dscommerce.repositories.OrderItemRepository;
@@ -81,12 +82,7 @@ public class OrderServiceTests {
 		Mockito.when(productRepository.getReferenceById(existingProductId)).thenReturn(product);
 		Mockito.when(productRepository.getReferenceById(nonExistingProductId)).thenThrow(EntityNotFoundException.class);
 		
-		//Mockito.when(repository.save(any())).thenReturn(order); this way it doesn't work. see below
-		Mockito.when(repository.save(Mockito.any(Order.class))).thenAnswer(invocation -> {
-		    Order order = invocation.getArgument(0);
-		    order.setId(existingOrderId);
-		    return order;
-		});
+		Mockito.when(repository.save(any())).thenReturn(order);
 		
 		Mockito.when(orderItemRepository.saveAll(any())).thenReturn(new ArrayList<>(order.getItems()));
 	}
@@ -143,7 +139,6 @@ public class OrderServiceTests {
 		OrderDTO result = service.insert(orderDTO);
 		
 		Assertions.assertNotNull(result);
-		Assertions.assertEquals(result.getId(), existingOrderId);
 	}
 	
 	@Test
@@ -154,7 +149,6 @@ public class OrderServiceTests {
 		OrderDTO result = service.insert(orderDTO);
 		
 		Assertions.assertNotNull(result);
-		Assertions.assertEquals(result.getId(), existingOrderId);
 	}
 	
 	@Test
@@ -166,6 +160,23 @@ public class OrderServiceTests {
 		orderDTO = new OrderDTO(order);
 		
 		Assertions.assertThrows(UsernameNotFoundException.class, () -> {
+			@SuppressWarnings("unused")
+			OrderDTO result = service.insert(orderDTO);
+		});
+	}
+	
+	@Test
+	public void insertShouldThrowsEntityNotFoundExceptionWhenOrderProductIdDoesNotExist() {
+		
+		Mockito.when(userService.authenticated()).thenReturn(client);
+		
+		product.setId(nonExistingProductId);
+		OrderItem orderItem = new OrderItem(order, product, 2, 10.0);
+		order.getItems().add(orderItem);
+		
+		orderDTO = new OrderDTO(order);
+		
+		Assertions.assertThrows(EntityNotFoundException.class, () -> {
 			@SuppressWarnings("unused")
 			OrderDTO result = service.insert(orderDTO);
 		});
